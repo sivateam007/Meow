@@ -1,0 +1,105 @@
+@import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #142033;
+  --color-cream: #fff4e0;
+  --color-gold: #ffb020;
+  --color-coral: #ff4d6d;
+  --color-mint: #1fce93;
+  --color-sky: #8ecff2;
+  --font-display: "Fredoka", "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --radius-xl: 1.25rem;
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: var(--color-sky);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@keyframes hint-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.hint-pulse {
+  animation: hint-pulse 1.15s ease-in-out infinite;
+}
+
+@keyframes countdown-pop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  72% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+.countdown-pop {
+  animation: countdown-pop 0.92s cubic-bezier(0.2, 0.9, 0.25, 1) forwards;
+}
+
+@keyframes streak-run {
+  from {
+    transform: translate3d(0, -25vh, 0) scaleY(0.5);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  to {
+    transform: translate3d(0, 125vh, 0) scaleY(1.7);
+    opacity: 0;
+  }
+}
+
+.streak {
+  position: absolute;
+  top: 0;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.95), transparent);
+  animation-name: streak-run;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hint-pulse,
+  .countdown-pop,
+  .streak {
+    animation: none;
+  }
+  .countdown-pop {
+    opacity: 1;
+  }
+}
