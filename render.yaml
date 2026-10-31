@@ -1,0 +1,16 @@
+# Render blueprint — deploys the Meow game as a Node web service.
+# Render reads this file automatically when you create the service from the
+# repo (or via the "Deploy to Render" button).
+services:
+  - type: web
+    name: meow
+    runtime: node
+    plan: free
+    # Build the standalone Nitro Node server (no Vercel/DB needed — the game
+    # stores progress in localStorage and the DB migrate step skips itself).
+    buildCommand: "npm install && NITRO_PRESET=node-server npm run build"
+    startCommand: "node .output/server/index.mjs"
+    healthCheckPath: "/"
+    envVars:
+      - key: NODE_VERSION
+        value: "22"

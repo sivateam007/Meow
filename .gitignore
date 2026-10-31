@@ -5,6 +5,7 @@ build/
 .nitro-out*/
 .build-check*/
 .build-check*/
+.render-build/
 .output/
 .vercel/
 artifacts/
@@ -14,7 +15,8 @@ screenshots/
 *.log
 .DS_Store
 startup.sh
-render.yaml
+# The Render deploy blueprint must ship with the repo.
+!render.yaml
 vercel.json
 scripts/
 server/
