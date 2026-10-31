@@ -21,6 +21,8 @@ export type CatRig = {
   torso: THREE.Group;
   ears: THREE.Group[];
   eyes: THREE.Group[];
+  /** Resting head height — the humanoid sits taller above its suit. */
+  headY?: number;
   brows: THREE.Group[];
   muzzle: THREE.Group;
   nose: THREE.Mesh;
@@ -113,13 +115,23 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
   // Tom-style cartoon cat for all racers, or a humanoid runner for the
   // GameSnacks-style roster. Body shape (build) scales proportions.
   const TOM = kind === "cat";
+  const human = kind === "humanoid";
   const buildScale = { slim: 0.85, medium: 1.0, chubby: 1.15, superhero: 1.08 }[build] ?? 1.0;
 
-  // One fur material shared by head, body, limbs and tail: the sim recolours
-  // this per racer, so the whole cat changes coat together.
-  // Tom (Tom & Jerry) / Oggy style: warm orange tabby for the player, soft pink
-  // for rivals — but every racer reads as the same friendly cartoon cat.
-  const fur = toon(index === 0 ? "#e89a4e" : "#ff8fae");
+  // Suit colour: the sim recolours `fur` per racer, so for the humanoid
+  // roster this is the athletic outfit; for the cat roster it is the coat.
+  const suitColor = human
+    ? (["#ff5a5f", "#3db7ff", "#1fce93", "#ffd43b"][index] ?? "#ff5a5f")
+    : index === 0
+      ? "#e89a4e"
+      : "#ff8fae";
+  const fur = toon(suitColor);
+  // Humanoid-only materials: skin for face/hands, hair, sneakers.
+  const skin = toon("#ffcfa4");
+  const noseSkin = toon("#f0a678");
+  const hairMat = toon(["#4a2f1e", "#2e2a33", "#8a5a2b", "#3a3f7a"][index] ?? "#4a2f1e");
+  const shoeMat = toon("#2f3a5f");
+  const kitWhite = toon("#f7f8fc");
   const cream = toon("#fff6e6");
   const blush = toon("#ffb3c7");
   const pink = toon("#ff8fb0");
@@ -133,49 +145,85 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
   const torso = new THREE.Group();
   torso.position.y = 0.78;
 
-  const body = kind === "humanoid"
-    ? ink(new THREE.Mesh(new THREE.CapsuleGeometry(0.34 * buildScale, 0.6 * buildScale, 8, 16), fur), 1.045)
+  const body = human
+    ? ink(new THREE.Mesh(new THREE.CapsuleGeometry(0.3 * buildScale, 0.5 * buildScale, 8, 16), fur), 1.045)
     : ink(new THREE.Mesh(new THREE.SphereGeometry(TOM ? 0.385 : 0.3, 32, 24), fur), 1.045);
   body.position.y = 0.02;
   body.castShadow = true;
   torso.add(body);
 
-  const belly = new THREE.Mesh(new THREE.SphereGeometry(kind === "humanoid" ? 0.26 * buildScale : 0.3, 28, 20), cream);
-  belly.scale.set(0.97 * buildScale, 0.9 * buildScale, 0.56 * buildScale);
-  belly.position.set(0, -0.02, 0.22);
-  belly.castShadow = true;
-  torso.add(belly);
+  if (human) {
+    // Athletic kit: navy belt at the waist, a white jersey yoke across the
+    // chest and a white collar ring where the head meets the shoulders.
+    const belt = new THREE.Mesh(
+      new THREE.TorusGeometry(0.305 * buildScale, 0.05 * buildScale, 10, 28),
+      shoeMat,
+    );
+    belt.rotation.x = Math.PI / 2;
+    belt.position.y = -0.24;
+    belt.castShadow = true;
+    torso.add(belt);
 
-  // A little neck fluff hides the seam between head and body.
-  const ruff = new THREE.Mesh(new THREE.SphereGeometry(0.24, 24, 16), cream);
-  ruff.scale.set(1.0 * buildScale, 0.5 * buildScale, 0.97 * buildScale);
-  ruff.position.y = 0.27;
-  ruff.castShadow = true;
-  torso.add(ruff);
+    const yoke = new THREE.Mesh(
+      new THREE.SphereGeometry(0.306 * buildScale, 24, 16),
+      kitWhite,
+    );
+    yoke.scale.set(1.0, 0.6, 1.0);
+    yoke.position.y = 0.2;
+    yoke.castShadow = true;
+    torso.add(yoke);
 
-  const band = new THREE.Mesh(new THREE.TorusGeometry(0.2 * buildScale, 0.045 * buildScale, 10, 28), collar);
-  band.rotation.x = Math.PI / 2;
-  band.position.y = 0.29;
-  band.castShadow = true;
-  torso.add(band);
-  const bellMesh = new THREE.Mesh(new THREE.SphereGeometry(TOM ? 0.065 : 0.058, 14, 12), bell);
-  bellMesh.position.set(0, 0.27, 0.2);
-  bellMesh.castShadow = true;
-  torso.add(bellMesh);
-  const bellDot = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 6), toon(INK));
-  bellDot.position.set(0, 0.25, 0.25);
-  torso.add(bellDot);
+    // Collar ring sized to the capsule's cross-section at neck height.
+    const capCenter = 0.02 + 0.25 * buildScale;
+    const collarR = Math.sqrt(
+      Math.max(0.04, (0.3 * buildScale) ** 2 - (0.4 - capCenter) ** 2),
+    );
+    const collarRing = new THREE.Mesh(
+      new THREE.TorusGeometry(collarR, 0.045, 10, 28),
+      kitWhite,
+    );
+    collarRing.rotation.x = Math.PI / 2;
+    collarRing.position.y = 0.4;
+    collarRing.castShadow = true;
+    torso.add(collarRing);
+  } else {
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(0.3, 28, 20), cream);
+    belly.scale.set(0.97 * buildScale, 0.9 * buildScale, 0.56 * buildScale);
+    belly.position.set(0, -0.02, 0.22);
+    belly.castShadow = true;
+    torso.add(belly);
 
-  // Tom & Jerry cartoon stripes: dark tabby bands for the player (Tom).
-  if (index === 0) {
-    const stripeMat = toon("#4a2a1a");
-    for (let i = 0; i < 3; i++) {
-      const band = new THREE.Mesh(new THREE.TorusGeometry(0.34 - i * 0.02, 0.022, 8, 32), stripeMat);
-      band.rotation.x = Math.PI / 2;
-      band.position.set(0, 0.02 - i * 0.12, 0.0);
-      band.scale.set(1.0, 1.0, 0.86);
-      band.castShadow = true;
-      torso.add(band);
+    // A little neck fluff hides the seam between head and body.
+    const ruff = new THREE.Mesh(new THREE.SphereGeometry(0.24, 24, 16), cream);
+    ruff.scale.set(1.0 * buildScale, 0.5 * buildScale, 0.97 * buildScale);
+    ruff.position.y = 0.27;
+    ruff.castShadow = true;
+    torso.add(ruff);
+
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.2 * buildScale, 0.045 * buildScale, 10, 28), collar);
+    band.rotation.x = Math.PI / 2;
+    band.position.y = 0.29;
+    band.castShadow = true;
+    torso.add(band);
+    const bellMesh = new THREE.Mesh(new THREE.SphereGeometry(TOM ? 0.065 : 0.058, 14, 12), bell);
+    bellMesh.position.set(0, 0.27, 0.2);
+    bellMesh.castShadow = true;
+    torso.add(bellMesh);
+    const bellDot = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 6), toon(INK));
+    bellDot.position.set(0, 0.25, 0.25);
+    torso.add(bellDot);
+
+    // Tom & Jerry cartoon stripes: dark tabby bands for the player (Tom).
+    if (index === 0) {
+      const stripeMat = toon("#4a2a1a");
+      for (let i = 0; i < 3; i++) {
+        const band = new THREE.Mesh(new THREE.TorusGeometry(0.34 - i * 0.02, 0.022, 8, 32), stripeMat);
+        band.rotation.x = Math.PI / 2;
+        band.position.set(0, 0.02 - i * 0.12, 0.0);
+        band.scale.set(1.0, 1.0, 0.86);
+        band.castShadow = true;
+        torso.add(band);
+      }
     }
   }
 
@@ -184,23 +232,37 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
   head.position.y = 1.4;
   head.scale.setScalar(1.06 * buildScale);
 
-  const skull = ink(new THREE.Mesh(new THREE.SphereGeometry(kind === "humanoid" ? 0.3 : 0.36, 32, 26), fur), 1.045);
-  skull.scale.set(kind === "humanoid" ? 1.02 : 1.0, kind === "humanoid" ? 0.92 : 0.98, kind === "humanoid" ? 0.9 : 0.94);
+  const skull = ink(
+    new THREE.Mesh(new THREE.SphereGeometry(human ? 0.3 : 0.36, 32, 26), human ? skin : fur),
+    1.045,
+  );
+  skull.scale.set(human ? 1.04 : 1.0, human ? 0.96 : 0.98, human ? 0.98 : 0.94);
   skull.castShadow = true;
   head.add(skull);
 
   // Chubby cheek tufts make the silhouette read as a kitten, not a robot.
-  for (const side of [-1, 1]) {
-    const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.15, 20, 16), fur);
-    cheek.scale.set(0.92, 0.8, 0.7);
-    cheek.position.set(side * 0.25, -0.08, 0.18);
-    cheek.castShadow = true;
-    head.add(cheek);
+  if (!human) {
+    for (const side of [-1, 1]) {
+      const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.15, 20, 16), fur);
+      cheek.scale.set(0.92, 0.8, 0.7);
+      cheek.position.set(side * 0.25, -0.08, 0.18);
+      cheek.castShadow = true;
+      head.add(cheek);
+    }
   }
 
   // Ears: rounded triangles with pink insides, tilted slightly outward.
   const ear = (side: number) => {
     const g = new THREE.Group();
+    if (human) {
+      // Simple rounded human ears on the sides of the head.
+      const lobe = ink(new THREE.Mesh(new THREE.SphereGeometry(0.07, 14, 12), skin), 1.06);
+      lobe.scale.set(0.5, 0.95, 0.8);
+      lobe.position.set(side * 0.3, -0.02, -0.01);
+      lobe.castShadow = true;
+      g.add(lobe);
+      return g;
+    }
     const outer = ink(
       new THREE.Mesh(new THREE.ConeGeometry(0.2 * buildScale, 0.44 * buildScale, 16, 2), fur),
       1.06,
@@ -250,8 +312,8 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
     shine2.position.set(0.03, -0.03, 0.09);
     g.add(shine2);
 
-    // Eyelid: a fur-coloured half-shell that closes over the eye on blink.
-    const lid = new THREE.Mesh(new THREE.SphereGeometry(0.128, 20, 12), fur);
+    // Eyelid: a face-coloured half-shell that closes over the eye on blink.
+    const lid = new THREE.Mesh(new THREE.SphereGeometry(0.128, 20, 12), human ? skin : fur);
     lid.scale.set(0.88, 0.35, 0.5);
     lid.position.set(0, 0.06, 0.02);
     lid.castShadow = false;
@@ -266,6 +328,15 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
   // Soft brows; barely tilted so the resting face stays friendly.
   const brow = (side: number) => {
     const g = new THREE.Group();
+    if (human) {
+      // Short brows set close to the forehead so they never float off the face.
+      const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.013, 0.05, 6, 10), toon(INK));
+      b.position.set(side * 0.11, 0.215, 0.2);
+      b.rotation.z = Math.PI / 2 + side * 0.14;
+      b.rotation.x = 0.1;
+      g.add(b);
+      return g;
+    }
     const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.013, 0.07, 6, 10), toon(INK));
     b.position.set(side * 0.15, 0.235, 0.285);
     b.rotation.z = Math.PI / 2 + side * 0.16;
@@ -277,74 +348,97 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
   const browR = brow(1);
   head.add(browL, browR);
 
-  // ---------- muzzle / nose / smile ----------
+  // ---------- face: cat muzzle or a human nose + smile ----------
   const muzzle = new THREE.Group();
   muzzle.position.set(0, -0.14, 0.06);
+  let nose: THREE.Mesh;
+  let smile: THREE.Mesh;
+  let whL: THREE.Group;
+  let whR: THREE.Group;
 
-  const snout = new THREE.Mesh(new THREE.SphereGeometry(0.155, 24, 18), cream);
-  snout.scale.set(1.1, 0.78, 0.72);
-  snout.position.set(0, 0.015, 0.16);
-  snout.castShadow = true;
-  muzzle.add(snout);
+  if (human) {
+    // Cartoon human face: a small rounded nose sitting on the face surface…
+    nose = ink(new THREE.Mesh(new THREE.SphereGeometry(0.048, 14, 12), noseSkin), 1.05);
+    nose.scale.set(1.0, 0.9, 0.85);
+    nose.position.set(0, 0.09, 0.215);
+    nose.castShadow = true;
+    muzzle.add(nose);
 
-  for (const side of [-1, 1]) {
-    const pad = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), cream);
-    pad.scale.set(1.0, 0.8, 0.8);
-    pad.position.set(side * 0.082, -0.005, 0.185);
-    muzzle.add(pad);
-  }
+    // …and a friendly smile just proud of the chin.
+    smile = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.013, 6, 16, Math.PI), toon(INK));
+    smile.position.set(0, -0.05, 0.178);
+    smile.rotation.z = Math.PI;
+    smile.rotation.x = -0.06;
+    muzzle.add(smile);
 
-  // Cheek blush: soft pink circles so the face reads friendly and cute.
-  for (const side of [-1, 1]) {
-    const blushM = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 12), blush);
-    blushM.scale.set(1, 0.85, 0.55);
-    blushM.position.set(side * 0.235, -0.005, 0.275);
-    muzzle.add(blushM);
-  }
+    whL = new THREE.Group();
+    whR = new THREE.Group();
+  } else {
+    const snout = new THREE.Mesh(new THREE.SphereGeometry(0.155, 24, 18), cream);
+    snout.scale.set(1.1, 0.78, 0.72);
+    snout.position.set(0, 0.015, 0.16);
+    snout.castShadow = true;
+    muzzle.add(snout);
 
-  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.052, 14, 12), pink);
-  nose.scale.set(1.25, 0.8, 0.72);
-  nose.position.set(0, 0.075, 0.285);
-  nose.castShadow = true;
-  muzzle.add(nose);
-
-  const smile = new THREE.Mesh(
-    new THREE.TorusGeometry(0.055, 0.012, 6, 16, Math.PI),
-    toon(INK),
-  );
-  smile.position.set(0, -0.02, 0.285);
-  smile.rotation.z = Math.PI;
-  smile.rotation.x = -0.06;
-  muzzle.add(smile);
-
-  const tongue = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 10), pink);
-  tongue.scale.set(1.2, 0.5, 0.55);
-  tongue.position.set(0, -0.06, 0.284);
-  muzzle.add(tongue);
-
-  // Whiskers: three per cheek, thin and swept back a little.
-  const whiskerLine = new THREE.Group();
-  const makeWhiskers = (side: number) => {
-    const g = new THREE.Group();
-    const mat = toon(INK);
-    for (let i = 0; i < 3; i++) {
-      const len = 0.24 + i * 0.025;
-      const n = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0045, len, 5), mat);
-      n.rotation.z = Math.PI / 2 + (i - 1) * 0.16;
-      n.rotation.y = -side * 0.22;
-      n.position.set(side * (0.12 + len * 0.42), 0.02 + (i - 1) * 0.028, 0.2);
-      g.add(n);
+    for (const side of [-1, 1]) {
+      const pad = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), cream);
+      pad.scale.set(1.0, 0.8, 0.8);
+      pad.position.set(side * 0.082, -0.005, 0.185);
+      muzzle.add(pad);
     }
-    return g;
-  };
-  const whL = makeWhiskers(-1);
-  const whR = makeWhiskers(1);
+
+    // Cheek blush: soft pink circles so the face reads friendly and cute.
+    for (const side of [-1, 1]) {
+      const blushM = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 12), blush);
+      blushM.scale.set(1, 0.85, 0.55);
+      blushM.position.set(side * 0.235, -0.005, 0.275);
+      muzzle.add(blushM);
+    }
+
+    nose = new THREE.Mesh(new THREE.SphereGeometry(0.052, 14, 12), pink);
+    nose.scale.set(1.25, 0.8, 0.72);
+    nose.position.set(0, 0.075, 0.285);
+    nose.castShadow = true;
+    muzzle.add(nose);
+
+    smile = new THREE.Mesh(
+      new THREE.TorusGeometry(0.055, 0.012, 6, 16, Math.PI),
+      toon(INK),
+    );
+    smile.position.set(0, -0.02, 0.285);
+    smile.rotation.z = Math.PI;
+    smile.rotation.x = -0.06;
+    muzzle.add(smile);
+
+    const tongue = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 10), pink);
+    tongue.scale.set(1.2, 0.5, 0.55);
+    tongue.position.set(0, -0.06, 0.284);
+    muzzle.add(tongue);
+
+    // Whiskers: three per cheek, thin and swept back a little.
+    const makeWhiskers = (side: number) => {
+      const g = new THREE.Group();
+      const mat = toon(INK);
+      for (let i = 0; i < 3; i++) {
+        const len = 0.24 + i * 0.025;
+        const n = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0045, len, 5), mat);
+        n.rotation.z = Math.PI / 2 + (i - 1) * 0.16;
+        n.rotation.y = -side * 0.22;
+        n.position.set(side * (0.12 + len * 0.42), 0.02 + (i - 1) * 0.028, 0.2);
+        g.add(n);
+      }
+      return g;
+    };
+    whL = makeWhiskers(-1);
+    whR = makeWhiskers(1);
+  }
+  const whiskerLine = new THREE.Group();
   whiskerLine.add(whL, whR);
   muzzle.add(whiskerLine);
   head.add(muzzle);
 
   // Tom & Jerry cartoon stripes on the head (Tom only).
-  if (index === 0) {
+  if (index === 0 && !human) {
     const stripeMat = toon("#4a2a1a");
     const headStripe = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.022, 8, 28), stripeMat);
     headStripe.rotation.x = Math.PI / 2;
@@ -354,15 +448,37 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
     head.add(headStripe);
   }
 
-  // Forehead tuft: three soft leaves of fur.
+  // Forehead tuft (cat) or a swept-back hair shell (human).
   const hair = new THREE.Group();
-  for (let i = 0; i < 3; i++) {
-    const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.16, 10), fur);
-    tuft.position.set((i - 1) * 0.052, 0.28 + (i === 1 ? 0.03 : 0), 0.07);
-    tuft.rotation.z = (i - 1) * 0.38;
-    tuft.rotation.x = -0.5;
-    tuft.castShadow = true;
-    hair.add(tuft);
+  if (human) {
+    // Shifted behind the face so the forehead and features stay clear while
+    // the crown, sides and back of the head stay covered.
+    const cap = ink(new THREE.Mesh(new THREE.SphereGeometry(0.305, 26, 20), hairMat), 1.03);
+    cap.scale.set(1.05, 1.0, 1.0);
+    cap.position.set(0, 0.02, -0.06);
+    cap.castShadow = true;
+    hair.add(cap);
+    // Side-swept fringe: two lobes that arc across the upper forehead and
+    // vanish into the face, giving the hair a styled silhouette.
+    const fringe = (x: number, y: number, z: number, sx: number, sy: number, rz: number) => {
+      const f = ink(new THREE.Mesh(new THREE.SphereGeometry(0.12, 18, 14), hairMat), 1.04);
+      f.scale.set(sx, sy, 0.9);
+      f.position.set(x, y, z);
+      f.rotation.z = rz;
+      f.castShadow = true;
+      hair.add(f);
+    };
+    fringe(0.03, 0.27, 0.1, 1.3, 0.42, -0.18);
+    fringe(-0.09, 0.255, 0.085, 0.9, 0.4, 0.22);
+  } else {
+    for (let i = 0; i < 3; i++) {
+      const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.16, 10), fur);
+      tuft.position.set((i - 1) * 0.052, 0.28 + (i === 1 ? 0.03 : 0), 0.07);
+      tuft.rotation.z = (i - 1) * 0.38;
+      tuft.rotation.x = -0.5;
+      tuft.castShadow = true;
+      hair.add(tuft);
+    }
   }
   head.add(hair);
 
@@ -393,62 +509,86 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
     playerMark = marker;
   }
 
-  // ---------- tail: a real curved tube, cream tip ----------
+  // ---------- tail: a real curved tube, cream tip (cats only) ----------
   const tail = new THREE.Group();
   tail.position.set(0, 0.62, -0.24);
-  tail.scale.setScalar(1.05 * buildScale);
-  const curve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(0.02, 0.16, -0.19),
-    new THREE.Vector3(0.14, 0.22, -0.34),
-    new THREE.Vector3(0.34, 0.12, -0.4),
-    new THREE.Vector3(0.42, 0.3, -0.46),
-  ]);
-  const tailMesh = ink(
-    new THREE.Mesh(new THREE.TubeGeometry(curve, 20, 0.052, 8, false), fur),
-    1.09,
-  );
-  tailMesh.castShadow = true;
-  tail.add(tailMesh);
-  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.073, 14, 12), cream);
-  tip.position.copy(curve.getPointAt(1));
-  tip.scale.set(1.05, 1.05, 1.05);
-  tail.add(tip);
-  if (index === 0) {
-    const stripeMat = toon("#4a2a1a");
-    for (let i = 0; i < 3; i++) {
-      const tband = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.018, 6, 16), stripeMat);
-      tband.position.set(0.05 + i * 0.12, 0.1 + i * 0.06, -0.2 - i * 0.1);
-      tband.rotation.y = 0.4 + i * 0.3;
-      tband.castShadow = true;
-      tail.add(tband);
+  if (human) {
+    // Humans have no tail — keep an empty group so the animator can still
+    // rotate it safely (it is referenced unguarded during tumbles).
+    group.add(tail);
+  } else {
+    tail.scale.setScalar(1.05 * buildScale);
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0.02, 0.16, -0.19),
+      new THREE.Vector3(0.14, 0.22, -0.34),
+      new THREE.Vector3(0.34, 0.12, -0.4),
+      new THREE.Vector3(0.42, 0.3, -0.46),
+    ]);
+    const tailMesh = ink(
+      new THREE.Mesh(new THREE.TubeGeometry(curve, 20, 0.052, 8, false), fur),
+      1.09,
+    );
+    tailMesh.castShadow = true;
+    tail.add(tailMesh);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.073, 14, 12), cream);
+    tip.position.copy(curve.getPointAt(1));
+    tip.scale.set(1.05, 1.05, 1.05);
+    tail.add(tip);
+    if (index === 0) {
+      const stripeMat = toon("#4a2a1a");
+      for (let i = 0; i < 3; i++) {
+        const tband = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.018, 6, 16), stripeMat);
+        tband.position.set(0.05 + i * 0.12, 0.1 + i * 0.06, -0.2 - i * 0.1);
+        tband.rotation.y = 0.4 + i * 0.3;
+        tband.castShadow = true;
+        tail.add(tband);
+      }
     }
+    group.add(tail);
   }
-  group.add(tail);
 
   // ---------- legs ----------
   const leg = (side: number) => {
     const hip = new THREE.Group();
     hip.position.set(side * 0.145, 0.44, 0);
     hip.scale.setScalar(1.05 * buildScale);
-    const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.095, 0.2, 8, 14), fur);
+    const thigh = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.095, 0.2, 8, 14),
+      human ? kitWhite : fur,
+    );
     thigh.position.y = -0.17;
     thigh.castShadow = true;
     hip.add(thigh);
     const knee = new THREE.Group();
     knee.position.y = -0.33;
-    const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.078, 0.17, 8, 14), fur);
+    const shin = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.078, 0.17, 8, 14),
+      human ? skin : fur,
+    );
     shin.position.y = -0.15;
     shin.castShadow = true;
     knee.add(shin);
     const foot = ink(
-      new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12), cream),
+      new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12), human ? shoeMat : cream),
       1.06,
     );
     foot.scale.set(1.0, 0.58, 1.55);
     foot.position.set(0, -0.26, 0.07);
     foot.castShadow = true;
     knee.add(foot);
+    if (human) {
+      // White sneaker sole, parented to the foot so it follows the run cycle.
+      const sole = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), toon("#f4f6fb"));
+      sole.scale.set(1.06, 0.5, 1.0);
+      sole.position.set(0, -0.09, 0);
+      foot.add(sole);
+      // Rounded white toe cap at the front of the shoe.
+      const toe = new THREE.Mesh(new THREE.SphereGeometry(0.058, 12, 10), toon("#f4f6fb"));
+      toe.scale.set(1.15, 0.75, 0.95);
+      toe.position.set(0, -0.052, 0.065);
+      foot.add(toe);
+    }
     hip.add(knee);
     group.add(hip);
     return { hip, knee, foot };
@@ -465,26 +605,48 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
     upper.position.y = -0.15;
     upper.castShadow = true;
     shoulder.add(upper);
+    if (human) {
+      // Deltoid ball + white sleeve hem so the arm reads as a shirt sleeve.
+      const delt = ink(new THREE.Mesh(new THREE.SphereGeometry(0.105, 16, 12), fur), 1.05);
+      delt.castShadow = true;
+      shoulder.add(delt);
+      const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.018, 8, 18), kitWhite);
+      cuff.rotation.x = Math.PI / 2;
+      cuff.position.y = -0.27;
+      shoulder.add(cuff);
+    }
     const elbow = new THREE.Group();
     elbow.position.y = -0.3;
-    const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.15, 8, 14), fur);
+    const fore = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.06, 0.15, 8, 14),
+      human ? skin : fur,
+    );
     fore.position.y = -0.13;
     fore.castShadow = true;
     elbow.add(fore);
     const paw = ink(
-      new THREE.Mesh(new THREE.SphereGeometry(0.085, 14, 12), cream),
+      new THREE.Mesh(new THREE.SphereGeometry(0.085, 14, 12), human ? skin : cream),
       1.07,
     );
     paw.scale.set(1.05, 0.86, 1.16);
     paw.position.set(0, -0.27, 0.01);
     paw.castShadow = true;
     elbow.add(paw);
+    if (human) {
+      // Thumb bump so the hand reads as a cartoon fist, not a ball.
+      const thumb = new THREE.Mesh(new THREE.SphereGeometry(0.032, 10, 8), skin);
+      thumb.position.set(-side * 0.06, -0.255, 0.045);
+      thumb.scale.set(0.9, 1.1, 0.9);
+      elbow.add(thumb);
+    }
     // Toe beans make the mitten unmistakably a cat paw.
-    for (let k = 0; k < 3; k++) {
-      const bean = new THREE.Mesh(new THREE.SphereGeometry(0.017, 8, 6), pink);
-      bean.position.set((k - 1) * 0.03, -0.305, 0.075);
-      bean.scale.set(0.9, 0.8, 0.5);
-      elbow.add(bean);
+    if (!human) {
+      for (let k = 0; k < 3; k++) {
+        const bean = new THREE.Mesh(new THREE.SphereGeometry(0.017, 8, 6), pink);
+        bean.position.set((k - 1) * 0.03, -0.305, 0.075);
+        bean.scale.set(0.9, 0.8, 0.5);
+        elbow.add(bean);
+      }
     }
     shoulder.add(elbow);
     group.add(shoulder);
@@ -515,7 +677,8 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
     playerMark,
     hatRoot,
     fur,
-    furColor: index === 0 ? "#e89a4e" : "#ff8fae",
+    furColor: suitColor,
+    headY: human ? 1.52 : 1.42,
     tail,
     legs: [legL.hip, legR.hip],
     knees: [legL.knee, legR.knee],

@@ -1329,7 +1329,7 @@ export function createWorld(canvas: HTMLCanvasElement) {
     rig.torso.scale.set(1 - 0.045 * runK, (1 + 0.035 * runK) * breathe, 1 - 0.04 * runK);
 
     // Head bob: slightly forward, following the run direction with lean.
-    rig.head.position.y = 1.42 + (moving ? Math.abs(l) * 0.07 : 0);
+    rig.head.position.y = (rig.headY ?? 1.42) + (moving ? Math.abs(l) * 0.07 : 0);
     rig.head.position.x = moving ? l * 0.06 : 0;
     for (let s = 0; s < 2; s++) {
       const ear = (rig.ears ?? [null, null])[s];
@@ -1830,6 +1830,19 @@ export function createWorld(canvas: HTMLCanvasElement) {
         };
       })(),
       cats: CATS.map((c) => ({ v: c.group.visible, p: c.group.position.toArray().map((n) => Number(n.toFixed(2))) })),
+      rig: (() => {
+        const r = CATS[0] as any;
+        return {
+          headY: r.headY ?? 1.42,
+          torsoKids: r.torso.children.map((c: any) => c.geometry?.type ?? c.type),
+          tailKids: r.tail.children.length,
+          earKids: r.ears.map((e: any) => e.children.length),
+          hairKids: r.hair ? r.hair.children.length : 0,
+          muzzleKids: r.muzzle.children.length,
+          headKids: r.head.children.length,
+          fur: r.fur?.color?.getHexString?.() ?? null,
+        };
+      })(),
       meshes,
       visible,
       builtGen,
