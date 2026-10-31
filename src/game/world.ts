@@ -151,8 +151,8 @@ function labelTexture(text: string, bg: string, fg: string) {
   return tex;
 }
 
-export function makeCat(index: number, build: string = "medium"): CatRig {
-  return makeCatRig(index, build);
+export function makeCat(index: number, build: string = "medium", kind: "cat" | "humanoid" = "humanoid"): CatRig {
+  return makeCatRig(index, build, kind);
 }
 
 function trackGeometry(samples: any[], pal: Palette) {
@@ -421,7 +421,7 @@ export function createWorld(canvas: HTMLCanvasElement) {
     skyGroup.add(cloud);
   }
 
-  const CATS = [makeCat(0, "medium"), makeCat(1, "slim"), makeCat(2, "chubby"), makeCat(3, "superhero")];
+  const CATS = [makeCat(0, "medium", "humanoid"), makeCat(1, "slim", "humanoid"), makeCat(2, "chubby", "humanoid"), makeCat(3, "superhero", "humanoid")];
   const rigs = CATS;
   for (const rig of rigs) scene.add(rig.group);
 
@@ -581,7 +581,7 @@ export function createWorld(canvas: HTMLCanvasElement) {
       const mesh = obj as THREE.Mesh;
       if (mesh.geometry) mesh.geometry.dispose();
     });
-    const newRig = makeCatRig(0, build);
+    const newRig = makeCatRig(0, build, "humanoid");
     newRig.fur?.color.set(currentColor);
     newRig.furColor = currentColor;
     buildHat(newRig, currentHat);

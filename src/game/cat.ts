@@ -108,10 +108,11 @@ function capsule(radius: number, length: number, material: THREE.Material) {
   return new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 8, 16), material);
 }
 
-export function makeCatRig(index: number, build: string = "medium"): CatRig {
+export function makeCatRig(index: number, build: string = "medium", kind: "cat" | "humanoid" = "cat"): CatRig {
   const group = new THREE.Group();
-  // Tom-style cartoon cat for all racers. Body shape (build) scales proportions.
-  const TOM = true;
+  // Tom-style cartoon cat for all racers, or a humanoid runner for the
+  // GameSnacks-style roster. Body shape (build) scales proportions.
+  const TOM = kind === "cat";
   const buildScale = { slim: 0.85, medium: 1.0, chubby: 1.15, superhero: 1.08 }[build] ?? 1.0;
 
   // One fur material shared by head, body, limbs and tail: the sim recolours
@@ -128,20 +129,18 @@ export function makeCatRig(index: number, build: string = "medium"): CatRig {
   const irisMat = new THREE.MeshBasicMaterial({ color: "#20335c", fog: false });
   const shineMat = new THREE.MeshBasicMaterial({ color: "#ffffff", fog: false });
 
-  // ---------- torso: soft pear shape with a cream tummy ----------
+  // ---------- torso: humanoid runner chest (GameSnacks-style) or cat pear tummy ----------
   const torso = new THREE.Group();
   torso.position.y = 0.78;
 
-  const body = ink(
-    new THREE.Mesh(new THREE.SphereGeometry(TOM ? 0.385 : 0.3, 32, 24), fur),
-    1.045,
-  );
-  body.scale.set(1.05 * buildScale, 1.0 * buildScale, 0.9 * buildScale);
+  const body = kind === "humanoid"
+    ? ink(new THREE.Mesh(new THREE.CapsuleGeometry(0.34 * buildScale, 0.6 * buildScale, 8, 16), fur), 1.045)
+    : ink(new THREE.Mesh(new THREE.SphereGeometry(TOM ? 0.385 : 0.3, 32, 24), fur), 1.045);
   body.position.y = 0.02;
   body.castShadow = true;
   torso.add(body);
 
-  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.3, 28, 20), cream);
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(kind === "humanoid" ? 0.26 * buildScale : 0.3, 28, 20), cream);
   belly.scale.set(0.97 * buildScale, 0.9 * buildScale, 0.56 * buildScale);
   belly.position.set(0, -0.02, 0.22);
   belly.castShadow = true;
@@ -185,8 +184,8 @@ export function makeCatRig(index: number, build: string = "medium"): CatRig {
   head.position.y = 1.4;
   head.scale.setScalar(1.06 * buildScale);
 
-  const skull = ink(new THREE.Mesh(new THREE.SphereGeometry(0.36, 32, 26), fur), 1.045);
-  skull.scale.set(1.02, 0.98, 0.94);
+  const skull = ink(new THREE.Mesh(new THREE.SphereGeometry(kind === "humanoid" ? 0.3 : 0.36, 32, 26), fur), 1.045);
+  skull.scale.set(kind === "humanoid" ? 1.02 : 1.0, kind === "humanoid" ? 0.92 : 0.98, kind === "humanoid" ? 0.9 : 0.94);
   skull.castShadow = true;
   head.add(skull);
 
