@@ -186,7 +186,7 @@ export function createSim(
       : levelOrId;
   const player = makeRunner({
     name: "You",
-    color: "#7b5cff",
+    color: "#8fb0dd",
     isPlayer: true,
     s: 0,
     lateral: 0,

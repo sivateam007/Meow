@@ -151,7 +151,7 @@ function labelTexture(text: string, bg: string, fg: string) {
   return tex;
 }
 
-export function makeCat(index: number, build: string = "medium", kind: "cat" | "humanoid" = "humanoid"): CatRig {
+export function makeCat(index: number, build: string = "medium", kind: "cat" | "humanoid" = "cat"): CatRig {
   return makeCatRig(index, build, kind);
 }
 
@@ -421,7 +421,7 @@ export function createWorld(canvas: HTMLCanvasElement) {
     skyGroup.add(cloud);
   }
 
-  const CATS = [makeCat(0, "medium", "humanoid"), makeCat(1, "slim", "humanoid"), makeCat(2, "chubby", "humanoid"), makeCat(3, "superhero", "humanoid")];
+  const CATS = [makeCat(0, "medium", "cat"), makeCat(1, "slim", "cat"), makeCat(2, "chubby", "cat"), makeCat(3, "superhero", "cat")];
   const rigs = CATS;
   for (const rig of rigs) scene.add(rig.group);
 
@@ -567,7 +567,7 @@ export function createWorld(canvas: HTMLCanvasElement) {
   }
 
   let currentHat = "none";
-  let currentColor = "#7b5cff";
+  let currentColor = "#8fb0dd";
 
   function setHat(id: string) {
     currentHat = id;
@@ -581,9 +581,10 @@ export function createWorld(canvas: HTMLCanvasElement) {
       const mesh = obj as THREE.Mesh;
       if (mesh.geometry) mesh.geometry.dispose();
     });
-    const newRig = makeCatRig(0, build, "humanoid");
+    const newRig = makeCatRig(0, build, "cat");
     newRig.fur?.color.set(currentColor);
     newRig.furColor = currentColor;
+    for (const m of newRig.stripes ?? []) m.color.copy(new THREE.Color(currentColor).multiplyScalar(0.52));
     buildHat(newRig, currentHat);
     scene.add(newRig.group);
     CATS[0] = newRig;
@@ -1550,6 +1551,9 @@ export function createWorld(canvas: HTMLCanvasElement) {
     if (rig.fur && rig.furColor !== r.color) {
       rig.fur.color.set(r.color);
       rig.furColor = r.color;
+      // Tabby stripes are a darkened copy of the coat, so the cat keeps its
+      // Tom/Oggy tabby pattern on every skin colour.
+      for (const m of rig.stripes ?? []) m.color.copy(rig.fur.color).multiplyScalar(0.52);
       if (index === 0) currentColor = r.color;
     }
     rig.group.visible = r.invuln > 0 ? Math.floor(elapsed * 10) % 2 === 0 : true;

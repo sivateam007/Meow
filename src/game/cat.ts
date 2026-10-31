@@ -38,6 +38,8 @@ export type CatRig = {
   /** Fur material, recoloured per runner so each racer reads at a glance. */
   fur?: THREE.MeshStandardMaterial | THREE.MeshToonMaterial;
   furColor?: string;
+  /** Tabby stripe materials — darkened to match `fur` on every recolour. */
+  stripes?: THREE.MeshToonMaterial[];
   tail: THREE.Group;
   legs: THREE.Group[];
   knees: THREE.Group[];
@@ -123,9 +125,14 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
   const suitColor = human
     ? (["#ff5a5f", "#3db7ff", "#1fce93", "#ffd43b"][index] ?? "#ff5a5f")
     : index === 0
-      ? "#e89a4e"
+      ? "#8fb0dd"
       : "#ff8fae";
   const fur = toon(suitColor);
+  // Tabby stripes track the coat — a darkened copy of the player's fur, so the
+  // cat always reads as Tom/Oggy whatever skin colour is equipped.
+  const stripeMat = toon(
+    human ? "#4a2a1a" : `#${new THREE.Color(suitColor).multiplyScalar(0.52).getHexString()}`,
+  );
   // Humanoid-only materials: skin for face/hands, hair, sneakers.
   const skin = toon("#ffcfa4");
   const noseSkin = toon("#f0a678");
@@ -187,9 +194,10 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
     collarRing.castShadow = true;
     torso.add(collarRing);
   } else {
+    // Big round cream belly — soft, round shapes read as huggable.
     const belly = new THREE.Mesh(new THREE.SphereGeometry(0.3, 28, 20), cream);
-    belly.scale.set(0.97 * buildScale, 0.9 * buildScale, 0.56 * buildScale);
-    belly.position.set(0, -0.02, 0.22);
+    belly.scale.set(1.02 * buildScale, 0.96 * buildScale, 0.6 * buildScale);
+    belly.position.set(0, -0.04, 0.22);
     belly.castShadow = true;
     torso.add(belly);
 
@@ -215,7 +223,6 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
 
     // Tom & Jerry cartoon stripes: dark tabby bands for the player (Tom).
     if (index === 0) {
-      const stripeMat = toon("#4a2a1a");
       for (let i = 0; i < 3; i++) {
         const band = new THREE.Mesh(new THREE.TorusGeometry(0.34 - i * 0.02, 0.022, 8, 32), stripeMat);
         band.rotation.x = Math.PI / 2;
@@ -229,8 +236,9 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
 
   // ---------- head: oversized, round, expressive ----------
   const head = new THREE.Group();
-  head.position.y = 1.4;
-  head.scale.setScalar(1.06 * buildScale);
+  head.position.y = human ? 1.4 : 1.45;
+  // Chibi proportions for the cat: a big round kitten head on a small body.
+  head.scale.setScalar((human ? 1.06 : 1.2) * buildScale);
 
   const skull = ink(
     new THREE.Mesh(new THREE.SphereGeometry(human ? 0.3 : 0.36, 32, 26), human ? skin : fur),
@@ -284,36 +292,55 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
   const earR = ear(1);
   head.add(earL, earR);
 
-  // Big anime eyes. Each group can be moved/scaled by the rig animator.
+  // Big anime eyes — for the cat they're oversized and glossy, the core of
+  // the cute/kitten look (large pupils read as soft and friendly).
   const eye = (side: number) => {
     const g = new THREE.Group();
-    g.position.set(side * 0.148, 0.085, 0.287);
+    g.position.set(side * (human ? 0.148 : 0.17), human ? 0.085 : 0.055, 0.287);
 
-    const white = new THREE.Mesh(new THREE.SphereGeometry(0.122, 22, 18), eyeWhite);
-    white.scale.set(0.85, 1.12, 0.46);
+    const white = new THREE.Mesh(
+      new THREE.SphereGeometry(human ? 0.122 : 0.152, 22, 18),
+      eyeWhite,
+    );
+    white.scale.set(human ? 0.85 : 0.92, human ? 1.12 : 1.16, human ? 0.46 : 0.5);
     white.castShadow = true;
     g.add(white);
 
-    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.082, 20, 16), irisMat);
+    const iris = new THREE.Mesh(
+      new THREE.SphereGeometry(human ? 0.082 : 0.108, 20, 16),
+      irisMat,
+    );
     iris.position.set(0, -0.008, 0.05);
     iris.scale.set(0.86, 1.08, 0.4);
     g.add(iris);
 
-    // Pupil: a small dark dot that gives the eye direction and focus.
-    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.032, 12, 10), toon(INK));
+    // Pupil: a big dark dot — dilated pupils make the face read as adorable.
+    const pupil = new THREE.Mesh(
+      new THREE.SphereGeometry(human ? 0.032 : 0.055, 14, 12),
+      toon(INK),
+    );
     pupil.position.set(0, -0.008, 0.072);
     pupil.scale.set(0.9, 1.1, 0.5);
     g.add(pupil);
 
-    const shine = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 10), shineMat);
-    shine.position.set(-0.026, 0.045, 0.088);
+    const shine = new THREE.Mesh(
+      new THREE.SphereGeometry(human ? 0.03 : 0.048, 12, 10),
+      shineMat,
+    );
+    shine.position.set(-0.026, human ? 0.045 : 0.055, 0.095);
     g.add(shine);
-    const shine2 = new THREE.Mesh(new THREE.SphereGeometry(0.014, 9, 8), shineMat);
-    shine2.position.set(0.03, -0.03, 0.09);
+    const shine2 = new THREE.Mesh(
+      new THREE.SphereGeometry(human ? 0.014 : 0.022, 9, 8),
+      shineMat,
+    );
+    shine2.position.set(0.03, -0.03, 0.098);
     g.add(shine2);
 
     // Eyelid: a face-coloured half-shell that closes over the eye on blink.
-    const lid = new THREE.Mesh(new THREE.SphereGeometry(0.128, 20, 12), human ? skin : fur);
+    const lid = new THREE.Mesh(
+      new THREE.SphereGeometry(human ? 0.128 : 0.16, 20, 12),
+      human ? skin : fur,
+    );
     lid.scale.set(0.88, 0.35, 0.5);
     lid.position.set(0, 0.06, 0.02);
     lid.castShadow = false;
@@ -389,9 +416,9 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
 
     // Cheek blush: soft pink circles so the face reads friendly and cute.
     for (const side of [-1, 1]) {
-      const blushM = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 12), blush);
-      blushM.scale.set(1, 0.85, 0.55);
-      blushM.position.set(side * 0.235, -0.005, 0.275);
+      const blushM = new THREE.Mesh(new THREE.SphereGeometry(0.078, 16, 12), blush);
+      blushM.scale.set(1, 0.8, 0.5);
+      blushM.position.set(side * 0.255, 0.0, 0.28);
       muzzle.add(blushM);
     }
 
@@ -409,6 +436,19 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
     smile.rotation.z = Math.PI;
     smile.rotation.x = -0.06;
     muzzle.add(smile);
+
+    // The classic ω kitten mouth: two small arcs curling up either side of
+    // the nose. This single detail sells "cute cat" more than anything else.
+    for (const side of [-1, 1]) {
+      const arc = new THREE.Mesh(
+        new THREE.TorusGeometry(0.036, 0.009, 6, 14, Math.PI),
+        toon(INK),
+      );
+      arc.position.set(side * 0.036, 0.028, 0.288);
+      arc.rotation.z = Math.PI;
+      arc.rotation.x = -0.05;
+      muzzle.add(arc);
+    }
 
     const tongue = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 10), pink);
     tongue.scale.set(1.2, 0.5, 0.55);
@@ -439,7 +479,6 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
 
   // Tom & Jerry cartoon stripes on the head (Tom only).
   if (index === 0 && !human) {
-    const stripeMat = toon("#4a2a1a");
     const headStripe = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.022, 8, 28), stripeMat);
     headStripe.rotation.x = Math.PI / 2;
     headStripe.position.set(0, 0.18, 0.12);
@@ -536,7 +575,6 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
     tip.scale.set(1.05, 1.05, 1.05);
     tail.add(tip);
     if (index === 0) {
-      const stripeMat = toon("#4a2a1a");
       for (let i = 0; i < 3; i++) {
         const tband = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.018, 6, 16), stripeMat);
         tband.position.set(0.05 + i * 0.12, 0.1 + i * 0.06, -0.2 - i * 0.1);
@@ -570,10 +608,13 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
     shin.castShadow = true;
     knee.add(shin);
     const foot = ink(
-      new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 12), human ? shoeMat : cream),
+      new THREE.Mesh(
+        new THREE.SphereGeometry(human ? 0.1 : 0.118, 16, 12),
+        human ? shoeMat : cream,
+      ),
       1.06,
     );
-    foot.scale.set(1.0, 0.58, 1.55);
+    foot.scale.set(human ? 1.0 : 1.08, human ? 0.58 : 0.62, human ? 1.55 : 1.5);
     foot.position.set(0, -0.26, 0.07);
     foot.castShadow = true;
     knee.add(foot);
@@ -624,8 +665,12 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
     fore.position.y = -0.13;
     fore.castShadow = true;
     elbow.add(fore);
+    // Chunky mitten paws — big soft paws are a signature of cute kittens.
     const paw = ink(
-      new THREE.Mesh(new THREE.SphereGeometry(0.085, 14, 12), human ? skin : cream),
+      new THREE.Mesh(
+        new THREE.SphereGeometry(human ? 0.085 : 0.1, 14, 12),
+        human ? skin : cream,
+      ),
       1.07,
     );
     paw.scale.set(1.05, 0.86, 1.16);
@@ -678,7 +723,8 @@ export function makeCatRig(index: number, build: string = "medium", kind: "cat" 
     hatRoot,
     fur,
     furColor: suitColor,
-    headY: human ? 1.52 : 1.42,
+    stripes: human || index !== 0 ? [] : [stripeMat],
+    headY: human ? 1.52 : 1.46,
     tail,
     legs: [legL.hip, legR.hip],
     knees: [legL.knee, legR.knee],

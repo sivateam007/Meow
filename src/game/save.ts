@@ -108,6 +108,7 @@ const V1_KEY = "meow-save-v1";
 const LEGACY_KEY = "dash-riot-save-v1";
 
 export const SKINS = [
+  { id: "tom", name: "Tom", color: "#8fb0dd", price: 0 },
   { id: "violet", name: "Violet", color: "#7b5cff", price: 0 },
   { id: "coral", name: "Coral", color: "#ff4d6d", price: 0 },
   { id: "mint", name: "Mint", color: "#1fce93", price: 80 },
@@ -461,7 +462,7 @@ export function defaultSave(): Save {
     version: 2,
     coins: 0,
     unlocked: 1,
-    skin: "violet",
+    skin: "tom",
     owned: ["violet", "coral"],
     hat: "none",
     ownedHats: ["none"],
